@@ -1923,8 +1923,70 @@
 
     // ════ INTERFACE E IMPORTAÇÃO SEFAZ RS ════window.abrirModalSefaz = () => {  document.getElementById('sefaz-html-input').value = "";  document.getElementById('sefaz-local-padrao').value = "";  document.getElementById('sefaz-data-padrao').value = hoje();  document.getElementById('overlay-sefaz').classList.add('open');};
     window.fecharModalSefaz = () => { document.getElementById('overlay-sefaz').classList.remove('open'); };
-    window.processarHtmlSefaz = async () => { const htmlRaw = document.getElementById('sefaz-html-input').value.trim(); const localPadrao = document.getElementById('sefaz-local-padrao').value.trim() || "Nota SEFAZ RS"; const dataPadrao = document.getElementById('sefaz-data-padrao').value || hoje(); if (!htmlRaw) { toast("Cole o código HTML primeiro ⚠"); return; } if (!colRef) { toast("Firebase desconectado ⚠"); return; } try { const parser = new DOMParser(); const docNode = parser.parseFromString(htmlRaw, "text/html"); const linhas = docNode.querySelectorAll("#tabResultados tr, table[id*='tabResultados'] tr"); if (linhas.length === 0) { toast("Tabela não encontrada no HTML ⚠"); return; } let adicionados = 0; for (const AppLinha of linhas) { const txtTit = AppLinha.querySelector(".txtTit, .txtTitDisperis"); const txtCod = AppLinha.querySelector(".RCod, .txtCod"); const txtValUnit = AppLinha.querySelector(".vUnit, .vUnitDisperis"); const txtQtde = AppLinha.querySelector(".Rqtd, .RqtdDisperis"); if (txtTit && txtValUnit) { const nome = txtTit.textContent.replace(/\s+/g, " ").trim(); let barras = txtCod ? txtCod.textContent.replace(/[^\d]/g, "").trim() : null; if (barras && (barras.length < 8 || barras.length > 14)) barras = null; const preco = parseFloat(txtValUnit.textContent.replace("Vl. Unit.:", "").replace(/[^\d,]/g, "").replace(",", ".")); let qtd = "1 un"; if (txtQtde) { const qtdLimpa = txtQtde.textContent.replace("Qtde. total de itens:", "").replace(/\s+/g, " ").trim(); if (qtdLimpa) qtd = qtdLimpa; } let cat = "outros"; const n = nome.toLowerCase(); if (n.includes("arroz") || n.includes("feijao") || n.includes("massa") || n.includes("farinha") || n.includes("açúcar")) cat = "graos"; else if (n.includes("carne") || n.includes("frango") || n.includes("gado") || n.includes("linguiça") || n.includes("salsicha")) cat = "carnes"; else if (n.includes("leite") || n.includes("queijo") || n.includes("iogurte") || n.includes("nata") || n.includes("manteiga")) cat = "laticinios"; else if (n.includes("pao") || n.includes("cuca") || n.includes("bolo") || n.includes("biscoito")) cat = "padaria"; else if (n.includes("detergente") || n.includes("sabao") || n.includes("amaciante") || n.includes("desinfetante")) cat = "limpeza"; else if (n.includes("shampoo") || n.includes("sabonete") || n.includes("creme") || n.includes("pasta")) cat = "higiene"; else if (n.includes("racao") || n.includes("pet") || n.includes("caes") || n.includes("gatos")) cat = "petz"; else if (n.includes("refrigerante") || n.includes("suco") || n.includes("cerveja") || n.includes("agua") || n.includes("vinho")) cat = "bebidas"; if (nome && !isNaN(preco) && preco > 0) { await addDoc(colRef, { barras: barras, nome: nome, preco: preco, local: localPadrao, data: dataPadrao, cat: cat, qtd: qtd, obs: "Importado via HTML", quem: membroAtual || "Alex", cupomCod: null, cupomVal: null, precoLiq: null, ts: Date.now() }); adicionados++; } } } if (adicionados > 0) { toast(`${adicionados} itens salvos ✓`); fecharModalSefaz(); } else { toast("Nenhum item válido processado ⚠"); } } catch (err) { console.error(err); toast("Erro ao processar HTML ⚠"); } }
+window.processarHtmlSefaz = async () => {
+  const htmlRaw = document.getElementById('sefaz-html-input').value.trim();
+  const localPadrao = document.getElementById('sefaz-local-padrao').value.trim() || "Nota SEFAZ RS";
+  const dataPadrao = document.getElementById('sefaz-data-padrao').value || hoje();
 
+  if (!htmlRaw) {
+    toast("Cole o código HTML da nota primeiro ⚠");
+    return;
+  }
+
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlRaw, "text/html");
+
+    let itens = [];
+    let adicionados = 0;
+
+    // Seletores mais flexíveis para o HTML da SEFAZ RS
+    const linhas = doc.querySelectorAll('table tr, .prod-serv-header + table tr, table.toggle tr');
+
+    for (const tr of linhas) {
+      const descricaoEl = tr.querySelector('.fixo-prod-serv-descricao span, td span, .descricao');
+      const qtdEl = tr.querySelector('.fixo-prod-serv-qtd span');
+      const valorEl = tr.querySelector('.fixo-prod-serv-vb span, .vUnit, .valor');
+
+      if (descricaoEl && valorEl) {
+        const nome = descricaoEl.textContent.trim();
+        let qtd = qtdEl ? qtdEl.textContent.trim() : "1";
+        let precoStr = valorEl.textContent.replace('R$', '').replace(',', '.').trim();
+        const preco = parseFloat(precoStr);
+
+        if (nome && !isNaN(preco) && preco > 0) {
+          await addDoc(colRef, {
+            barras: null,
+            nome: nome,
+            preco: preco,
+            local: localPadrao,
+            data: dataPadrao,
+            cat: "outros",           // você pode melhorar a detecção depois
+            qtd: qtd,
+            obs: "Importado via SEFAZ",
+            quem: membroAtual || "Alex",
+            cupomCod: null,
+            cupomVal: null,
+            precoLiq: null,
+            ts: Date.now()
+          });
+          adicionados++;
+        }
+      }
+    }
+
+    if (adicionados > 0) {
+      toast(`${adicionados} itens importados com sucesso ✓`);
+      fecharModalSefaz();
+    } else {
+      toast("Nenhum item encontrado. Verifique se colou o HTML completo.");
+    }
+
+  } catch (err) {
+    console.error(err);
+    toast("Erro ao processar o HTML ⚠");
+  }
+};
     // ════ VINCULAÇÃO DIRETA DOS EVENTOS DO BOTÃO SEFAZ ════const btnImportar = document.getElementById('btn-importar-sefaz');if(btnImportar) {  btnImportar.addEventListener('click', () => { window.abrirModalSefaz(); });}const btnConfirmarProc = document.getElementById('btn-sefaz-confirmar-processo');if(btnConfirmarProc) {  btnConfirmarProc.addEventListener('click', () => { window.processarHtmlSefaz(); });}
 
     // ════ LOGIN RE-ESTRUTURADO ════const efetuarLoginDoFamilia = () => {  const val = document.getElementById('login-code').value.trim();  if(val === CODIGO_FAMILIA){ localStorage.setItem('precoCerto_auth','ok'); iniciarApp(); }   else { document.getElementById('login-error').textContent='Código incorreto.'; document.getElementById('login-code').value=''; }};const btnLoginSub = document.getElementById('btn-login-sub');if(btnLoginSub) { btnLoginSub.addEventListener('click', efetuarLoginDoFamilia);}
