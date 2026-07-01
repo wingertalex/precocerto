@@ -1806,8 +1806,29 @@ function diffPreco(atual, ref) {
     });
     const CATEGORIAS = [{ id: 'graos', label: 'Grãos', emoji: '🌾', grupo: 'mercado' }, { id: 'carnes', label: 'Carnes', emoji: '🥩', grupo: 'mercado' }, { id: 'laticinios', label: 'Laticínios', emoji: '🧀', grupo: 'mercado' }, { id: 'hortifruti', label: 'Hortifruti', emoji: '🥦', grupo: 'mercado' }, { id: 'bebidas', label: 'Bebidas', emoji: '🧃', grupo: 'mercado' }, { id: 'padaria', label: 'Padaria', emoji: '🍞', grupo: 'mercado' }, { id: 'congelados', label: 'Congelados', emoji: '🧊', grupo: 'mercado' }, { id: 'limpeza', label: 'Limpeza', emoji: '🧹', grupo: 'mercado' }, { id: 'higiene', label: 'Higiene', emoji: '🧴', grupo: 'mercado' }, { id: 'farmacia', label: 'Farmácia', emoji: '💊', grupo: 'farm' }, { id: 'petz', label: 'Petz', emoji: '🐾', grupo: 'petz' }, { id: 'outros', label: 'Outros', emoji: '📦', grupo: 'mercado' },];
     let db, colRef, unsubscribe; let dados = []; let catAtual = ''; let cupomAtivo = false; let membroAtual = localStorage.getItem('precoCerto_membro') || ''; let filtroCategoria = ''; let filtroAlerta = 'todos'; let idEdicao = null; let html5QrcodeScanner = null; window.charts = {};
-    document.getElementById('login-code').addEventListener('keydown', e => { if (e.key === 'Enter') tentarLogin(); }); window.tentarLogin = () => { const val = document.getElementById('login-code').value.trim(); if (val === CODIGO_FAMILIA) { localStorage.setItem('precoCerto_auth', 'ok'); iniciarApp(); } else { document.getElementById('login-error').textContent = 'Código incorreto.'; document.getElementById('login-code').value = ''; } };
-    function verificarLogin() { if (localStorage.getItem('precoCerto_auth') === 'ok') iniciarApp(); }
+// ====================== LOGIN ======================
+document.getElementById('login-code').addEventListener('keydown', e => {
+  if (e.key === 'Enter') tentarLogin();
+});
+
+const efetuarLoginDoFamilia = () => {
+  const val = document.getElementById('login-code').value.trim();
+  if (val === CODIGO_FAMILIA) {
+    localStorage.setItem('precoCerto_auth', 'ok');
+    iniciarApp();
+  } else {
+    document.getElementById('login-error').textContent = 'Código incorreto.';
+    document.getElementById('login-code').value = '';
+  }
+};
+
+window.tentarLogin = efetuarLoginDoFamilia;
+
+function verificarLogin() {
+  if (localStorage.getItem('precoCerto_auth') === 'ok') {
+    iniciarApp();
+  }
+}    function verificarLogin() { if (localStorage.getItem('precoCerto_auth') === 'ok') iniciarApp(); }
     function iniciarApp() { document.getElementById('screen-login').style.display = 'none'; document.getElementById('screen-app').style.display = 'block'; renderWhoChips(); renderCatGrid(); document.getElementById('inp-data').value = hoje(); try { const app = initializeApp(FIREBASE_CONFIG); db = getFirestore(app); colRef = collection(db, 'registros'); setSyncDot('syncing'); unsubscribe = onSnapshot(query(colRef, orderBy('ts', 'desc')), snap => { dados = snap.docs.map(d => ({ id: d.id, ...d.data() })); setSyncDot('on'); atualizarDatalist(); if (document.getElementById('view-produtos').classList.contains('active')) renderProdutos(); if (document.getElementById('view-alertas').classList.contains('active')) renderAlertas(); if (document.getElementById('view-lista').classList.contains('active')) renderLista(); if (document.getElementById('view-resumo').classList.contains('active')) renderResumo(); }, err => { console.error(err); setSyncDot('off'); toast('Erro de conexão com o banco ⚠'); }); } catch (e) { setSyncDot('off'); toast('Firebase não configurado ⚠'); } }
     window.sair = () => { if (unsubscribe) unsubscribe(); localStorage.removeItem('precoCerto_auth'); location.reload(); };
     function renderWhoChips() { document.getElementById('who-chips').innerHTML = MEMBROS.map(m => `<span class="who-chip ${membroAtual === m ? 'selected' : ''}" onclick="selecionarMembro('${m}')">${m}</span>`).join(''); } window.selecionarMembro = m => { membroAtual = m; localStorage.setItem('precoCerto_membro', m); renderWhoChips(); };
