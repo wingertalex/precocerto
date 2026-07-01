@@ -696,7 +696,7 @@
     window.abrirModalSefaz = () => { document.getElementById('sefaz-html-input').value = ""; document.getElementById('sefaz-local-padrao').value = ""; document.getElementById('sefaz-data-padrao').value = hoje(); document.getElementById('overlay-sefaz').classList.add('open'); };
     window.fecharModalSefaz = () => { document.getElementById('overlay-sefaz').classList.remove('open'); };
 
-   window.processarHtmlSefaz = async () => {
+  window.processarHtmlSefaz = async () => {
   const htmlRaw = document.getElementById('sefaz-html-input').value.trim();
   const localPadrao = document.getElementById('sefaz-local-padrao').value.trim() || "Nota SEFAZ RS";
   const dataPadrao = document.getElementById('sefaz-data-padrao').value || hoje();
@@ -705,6 +705,12 @@
     toast("Cole o código HTML da nota primeiro ⚠");
     return;
   }
+
+  // Mostra loading
+  const btnConfirm = document.getElementById('btn-sefaz-confirmar-processo');
+  const originalText = btnConfirm.textContent;
+  btnConfirm.disabled = true;
+  btnConfirm.innerHTML = '🔄 Processando...';
 
   try {
     const parser = new DOMParser();
@@ -728,13 +734,12 @@
         const valorTotal = parseFloat(valorStr) || 0;
 
         if (nome && valorTotal > 0) {
-          // Cálculo do preço unitário
           const precoUnitario = qtd > 1 ? (valorTotal / qtd) : valorTotal;
 
           await addDoc(colRef, {
             barras: null,
             nome: nome,
-            preco: Math.round(precoUnitario * 100) / 100,  // 2 casas decimais
+            preco: Math.round(precoUnitario * 100) / 100,
             local: localPadrao,
             data: dataPadrao,
             cat: "outros",
@@ -761,6 +766,10 @@
   } catch (err) {
     console.error(err);
     toast("Erro ao processar o HTML ⚠");
+  } finally {
+    // Restaura o botão
+    btnConfirm.disabled = false;
+    btnConfirm.textContent = originalText;
   }
 };
 
