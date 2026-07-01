@@ -467,16 +467,16 @@ document.getElementById('login-code').addEventListener('keydown', e => { if (e.k
 
 window.tentarLogin = efetuarLoginDoFamilia;
 
-function verificarLogin() {
-  if (localStorage.getItem('precoCerto_auth') === 'ok') iniciarApp();
-}
+//function verificarLogin() {
+//  if (localStorage.getItem('precoCerto_auth') === 'ok') iniciarApp();
+//}
 
-verificarLogin();
+//verificarLogin();
 
-    document.getElementById('login-code').addEventListener('keydown', e => { if (e.key === 'Enter') efetuarLoginDoFamilia(); });
-    const btnLoginSub = document.getElementById('btn-login-sub');
-    if (btnLoginSub) { btnLoginSub.addEventListener('click', efetuarLoginDoFamilia); }
-    window.tentarLogin = efetuarLoginDoFamilia;
+ //   document.getElementById('login-code').addEventListener('keydown', e => { if (e.key === 'Enter') efetuarLoginDoFamilia(); });
+//    const btnLoginSub = document.getElementById('btn-login-sub');
+//    if (btnLoginSub) { btnLoginSub.addEventListener('click', efetuarLoginDoFamilia); }
+ //   window.tentarLogin = efetuarLoginDoFamilia;//
 
     function verificarLogin() { if (localStorage.getItem('precoCerto_auth') === 'ok') iniciarApp(); }
 
