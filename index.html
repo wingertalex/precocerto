@@ -712,7 +712,6 @@
 
     let adicionados = 0;
 
-    // Seletores mais precisos para este DANFE da SEFAZ RS
     const tabelasItens = doc.querySelectorAll('table.toggle.box, table.prod-serv-header + table');
 
     for (const tabela of tabelasItens) {
@@ -722,20 +721,25 @@
 
       if (descricaoEl && valorEl) {
         const nome = descricaoEl.textContent.trim();
-        const qtd = qtdEl ? qtdEl.textContent.trim() : "1";
-        let precoStr = valorEl.textContent.replace(/[^\d,]/g, '').replace(',', '.');
-        const preco = parseFloat(precoStr);
+        let qtdStr = qtdEl ? qtdEl.textContent.trim().replace(',', '.') : "1";
+        let valorStr = valorEl.textContent.replace(/[^\d,]/g, '').replace(',', '.');
 
-        if (nome && !isNaN(preco) && preco > 0) {
+        const qtd = parseFloat(qtdStr) || 1;
+        const valorTotal = parseFloat(valorStr) || 0;
+
+        if (nome && valorTotal > 0) {
+          // Cálculo do preço unitário
+          const precoUnitario = qtd > 1 ? (valorTotal / qtd) : valorTotal;
+
           await addDoc(colRef, {
             barras: null,
             nome: nome,
-            preco: preco,
+            preco: Math.round(precoUnitario * 100) / 100,  // 2 casas decimais
             local: localPadrao,
             data: dataPadrao,
             cat: "outros",
-            qtd: qtd,
-            obs: "Importado via SEFAZ",
+            qtd: qtdStr,
+            obs: `Importado via SEFAZ (qtd: ${qtd})`,
             quem: membroAtual || "Alex",
             cupomCod: null,
             cupomVal: null,
@@ -748,10 +752,10 @@
     }
 
     if (adicionados > 0) {
-      toast(`${adicionados} produtos importados com sucesso ✓`);
+      toast(`${adicionados} produtos importados (preços unitários calculados) ✓`);
       fecharModalSefaz();
     } else {
-      toast("Nenhum produto encontrado. Verifique se colou o HTML completo.");
+      toast("Nenhum produto encontrado. Verifique o HTML.");
     }
 
   } catch (err) {
