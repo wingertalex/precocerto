@@ -452,33 +452,26 @@
 
     // ════ LOGIN E SESSÃO ════
     const efetuarLoginDoFamilia = () => {
-  const val = document.getElementById('login-code').value.trim();
-  if (val === CODIGO_FAMILIA) {
-    localStorage.setItem('precoCerto_auth', 'ok');
-    iniciarApp();
-  } else {
-    document.getElementById('login-error').textContent = 'Código incorreto.';
-    document.getElementById('login-code').value = '';
-  }
-};
+      const val = document.getElementById('login-code').value.trim();
+      if (val === CODIGO_FAMILIA) {
+        localStorage.setItem('precoCerto_auth', 'ok');
+        iniciarApp();
+      } else {
+        document.getElementById('login-error').textContent = 'Código incorreto.';
+        document.getElementById('login-code').value = '';
+      }
+    };
 
-document.getElementById('btn-login-sub').addEventListener('click', efetuarLoginDoFamilia);
-document.getElementById('login-code').addEventListener('keydown', e => { if (e.key === 'Enter') efetuarLoginDoFamilia(); });
+    document.getElementById('btn-login-sub').addEventListener('click', efetuarLoginDoFamilia);
+    document.getElementById('login-code').addEventListener('keydown', e => { if (e.key === 'Enter') efetuarLoginDoFamilia(); });
 
-window.tentarLogin = efetuarLoginDoFamilia;
+    window.tentarLogin = efetuarLoginDoFamilia;
 
-//function verificarLogin() {
-//  if (localStorage.getItem('precoCerto_auth') === 'ok') iniciarApp();
-//}
+    function verificarLogin() {
+      if (localStorage.getItem('precoCerto_auth') === 'ok') iniciarApp();
+    }
 
-//verificarLogin();
-
- //   document.getElementById('login-code').addEventListener('keydown', e => { if (e.key === 'Enter') efetuarLoginDoFamilia(); });
-//    const btnLoginSub = document.getElementById('btn-login-sub');
-//    if (btnLoginSub) { btnLoginSub.addEventListener('click', efetuarLoginDoFamilia); }
- //   window.tentarLogin = efetuarLoginDoFamilia;//
-
-    function verificarLogin() { if (localStorage.getItem('precoCerto_auth') === 'ok') iniciarApp(); }
+    verificarLogin();
 
     function iniciarApp() {
       document.getElementById('screen-login').style.display = 'none';
@@ -536,22 +529,13 @@ window.tentarLogin = efetuarLoginDoFamilia;
       let hasError = false; if (!nome) { document.getElementById('inp-nome').parentElement.style.borderColor = 'var(--red)'; toast('Informe o nome ⚠'); hasError = true; } else if (isNaN(preco) || preco <= 0) { document.getElementById('inp-preco').parentElement.style.borderColor = 'var(--red)'; toast('Preço inválido ⚠'); hasError = true; } else if (!local) { document.getElementById('inp-local').parentElement.style.borderColor = 'var(--red)'; toast('Informe o local ⚠'); hasError = true; } else if (!data) { document.getElementById('inp-data').parentElement.style.borderColor = 'var(--red)'; toast('Informe a data ⚠'); hasError = true; } if (hasError) return; if (!db) { toast('Firebase desconectado ⚠'); return; }
       const btn = document.getElementById('btn-salvar'); btn.disabled = true; btn.textContent = 'Salvando...';
       try {
-        if (idEdicao) { await updateDoc(doc(db, 'registros', idEdicao), { barras: barras || null, nome, preco, local, data, cat, qtd, obs, quem: membroAtual, cupomCod: cupomCod || null, cupomVal: cupomVal || null, precoLiq: precoLiq }); toast('Registro atualizado ✓'); } 
-        await addDoc(colRef, {
-            barras: null,
-            nome: item.nome,
-            preco: item.preco,
-            local: localPadrao,
-            data: dataPadrao,           // data da nota
-            cat: item.cat,
-            qtd: item.qtd,
-            obs: "Importado via SEFAZ",
-            quem: membroAtual || "Alex",
-            cupomCod: null,
-            cupomVal: null,
-            precoLiq: null,
-            ts: new Date(dataPadrao + "T12:00:00").getTime()  // ← CORREÇÃO AQUI
-          }); toast('Registro salvo ✓'); }
+        if (idEdicao) {
+          await updateDoc(doc(db, 'registros', idEdicao), { barras: barras || null, nome, preco, local, data, cat, qtd, obs, quem: membroAtual, cupomCod: cupomCod || null, cupomVal: cupomVal || null, precoLiq: precoLiq });
+          toast('Registro atualizado ✓');
+        } else {
+          await addDoc(colRef, { barras: barras || null, nome, preco, local, data, cat, qtd, obs, quem: membroAtual, cupomCod: cupomCod || null, cupomVal: cupomVal || null, precoLiq: precoLiq, ts: new Date(data + "T12:00:00").getTime() });
+          toast('Registro salvo ✓');
+        }
         cancelarEdicao();
       } catch (e) { toast('Erro ao salvar ⚠'); console.error(e); } finally { btn.disabled = false; btn.textContent = idEdicao ? 'Atualizar registro' : 'Salvar registro'; }
     };
