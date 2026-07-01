@@ -452,15 +452,26 @@
 
     // ════ LOGIN E SESSÃO ════
     const efetuarLoginDoFamilia = () => {
-      const val = document.getElementById('login-code').value.trim();
-      if (val === CODIGO_FAMILIA) {
-        localStorage.setItem('precoCerto_auth', 'ok');
-        iniciarApp();
-      } else {
-        document.getElementById('login-error').textContent = 'Código incorreto.';
-        document.getElementById('login-code').value = '';
-      }
-    };
+  const val = document.getElementById('login-code').value.trim();
+  if (val === CODIGO_FAMILIA) {
+    localStorage.setItem('precoCerto_auth', 'ok');
+    iniciarApp();
+  } else {
+    document.getElementById('login-error').textContent = 'Código incorreto.';
+    document.getElementById('login-code').value = '';
+  }
+};
+
+document.getElementById('btn-login-sub').addEventListener('click', efetuarLoginDoFamilia);
+document.getElementById('login-code').addEventListener('keydown', e => { if (e.key === 'Enter') efetuarLoginDoFamilia(); });
+
+window.tentarLogin = efetuarLoginDoFamilia;
+
+function verificarLogin() {
+  if (localStorage.getItem('precoCerto_auth') === 'ok') iniciarApp();
+}
+
+verificarLogin();
 
     document.getElementById('login-code').addEventListener('keydown', e => { if (e.key === 'Enter') efetuarLoginDoFamilia(); });
     const btnLoginSub = document.getElementById('btn-login-sub');
