@@ -526,7 +526,21 @@
       const btn = document.getElementById('btn-salvar'); btn.disabled = true; btn.textContent = 'Salvando...';
       try {
         if (idEdicao) { await updateDoc(doc(db, 'registros', idEdicao), { barras: barras || null, nome, preco, local, data, cat, qtd, obs, quem: membroAtual, cupomCod: cupomCod || null, cupomVal: cupomVal || null, precoLiq: precoLiq }); toast('Registro atualizado ✓'); } 
-        else { await addDoc(colRef, { barras: barras || null, nome, preco, local, data, cat, qtd, obs, quem: membroAtual, cupomCod: cupomCod || null, cupomVal: cupomVal || null, precoLiq: precoLiq, ts: Date.now() }); toast('Registro salvo ✓'); }
+        await addDoc(colRef, {
+            barras: null,
+            nome: item.nome,
+            preco: item.preco,
+            local: localPadrao,
+            data: dataPadrao,           // data da nota
+            cat: item.cat,
+            qtd: item.qtd,
+            obs: "Importado via SEFAZ",
+            quem: membroAtual || "Alex",
+            cupomCod: null,
+            cupomVal: null,
+            precoLiq: null,
+            ts: new Date(dataPadrao + "T12:00:00").getTime()  // ← CORREÇÃO AQUI
+          }); toast('Registro salvo ✓'); }
         cancelarEdicao();
       } catch (e) { toast('Erro ao salvar ⚠'); console.error(e); } finally { btn.disabled = false; btn.textContent = idEdicao ? 'Atualizar registro' : 'Salvar registro'; }
     };
