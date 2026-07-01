@@ -700,13 +700,13 @@
   const htmlRaw = document.getElementById('sefaz-html-input').value.trim();
   const localPadrao = document.getElementById('sefaz-local-padrao').value.trim() || "Nota SEFAZ RS";
   const dataPadrao = document.getElementById('sefaz-data-padrao').value || hoje();
+  const valorMinimo = 0.50; // ajuste se quiser
 
   if (!htmlRaw) {
-    toast("Cole o código HTML da nota primeiro ⚠");
+    toast("Cole o código HTML primeiro ⚠");
     return;
   }
 
-  // Mostra loading
   const btnConfirm = document.getElementById('btn-sefaz-confirmar-processo');
   const originalText = btnConfirm.textContent;
   btnConfirm.disabled = true;
@@ -716,11 +716,11 @@
     const parser = new DOMParser();
     const doc = parser.parseFromString(htmlRaw, "text/html");
 
-    let adicionados = 0;
-
+    const itensEncontrados = [];
     const tabelasItens = doc.querySelectorAll('table.toggle.box, table.prod-serv-header + table');
 
-    for (const tabela of tabelasItens) {
+    for (let i = 0; i < tabelasItens.length; i++) {
+      const tabela = tabelasItens[i];
       const descricaoEl = tabela.querySelector('.fixo-prod-serv-descricao span');
       const qtdEl = tabela.querySelector('.fixo-prod-serv-qtd span');
       const valorEl = tabela.querySelector('.fixo-prod-serv-vb span');
@@ -732,42 +732,68 @@
 
         const qtd = parseFloat(qtdStr) || 1;
         const valorTotal = parseFloat(valorStr) || 0;
+        const precoUnitario = qtd > 1 ? (valorTotal / qtd) : valorTotal;
 
-        if (nome && valorTotal > 0) {
-          const precoUnitario = qtd > 1 ? (valorTotal / qtd) : valorTotal;
+        if (nome && valorTotal > valorMinimo) {
+          // Detecção de categoria
+          let cat = "outros";
+          const n = nome.toLowerCase();
+          if (n.includes("arroz") || n.includes("feijao") || n.includes("macarrao")) cat = "graos";
+          else if (n.includes("carne") || n.includes("frango")) cat = "carnes";
+          else if (n.includes("leite") || n.includes("queijo")) cat = "laticinios";
+          else if (n.includes("pao") || n.includes("biscoito")) cat = "padaria";
+          else if (n.includes("refrigerante") || n.includes("coca")) cat = "bebidas";
+          else if (n.includes("detergente") || n.includes("sabao")) cat = "limpeza";
 
-          await addDoc(colRef, {
-            barras: null,
+          itensEncontrados.push({
             nome: nome,
             preco: Math.round(precoUnitario * 100) / 100,
-            local: localPadrao,
-            data: dataPadrao,
-            cat: "outros",
             qtd: qtdStr,
-            obs: `Importado via SEFAZ (qtd: ${qtd})`,
-            quem: membroAtual || "Alex",
-            cupomCod: null,
-            cupomVal: null,
-            precoLiq: null,
-            ts: Date.now()
+            cat: cat
           });
-          adicionados++;
         }
       }
     }
 
-    if (adicionados > 0) {
-      toast(`${adicionados} produtos importados (preços unitários calculados) ✓`);
-      fecharModalSefaz();
-    } else {
-      toast("Nenhum produto encontrado. Verifique o HTML.");
+    if (itensEncontrados.length === 0) {
+      toast("Nenhum produto encontrado.");
+      return;
     }
+
+    // === PRÉ-VISUALIZAÇÃO ===
+    if (!confirm(`Foram encontrados ${itensEncontrados.length} produtos.\n\nDeseja salvar todos?`)) {
+      toast("Importação cancelada.");
+      return;
+    }
+
+    // Salvar
+    let salvos = 0;
+    for (const item of itensEncontrados) {
+      await addDoc(colRef, {
+        barras: null,
+        nome: item.nome,
+        preco: item.preco,
+        local: localPadrao,
+        data: dataPadrao,
+        cat: item.cat,
+        qtd: item.qtd,
+        obs: "Importado via SEFAZ",
+        quem: membroAtual || "Alex",
+        cupomCod: null,
+        cupomVal: null,
+        precoLiq: null,
+        ts: Date.now()
+      });
+      salvos++;
+    }
+
+    toast(`${salvos} produtos importados com sucesso ✓`);
+    fecharModalSefaz();
 
   } catch (err) {
     console.error(err);
     toast("Erro ao processar o HTML ⚠");
   } finally {
-    // Restaura o botão
     btnConfirm.disabled = false;
     btnConfirm.textContent = originalText;
   }
