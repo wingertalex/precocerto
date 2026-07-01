@@ -696,24 +696,69 @@
     window.abrirModalSefaz = () => { document.getElementById('sefaz-html-input').value = ""; document.getElementById('sefaz-local-padrao').value = ""; document.getElementById('sefaz-data-padrao').value = hoje(); document.getElementById('overlay-sefaz').classList.add('open'); };
     window.fecharModalSefaz = () => { document.getElementById('overlay-sefaz').classList.remove('open'); };
 
-    window.processarHtmlSefaz = async () => {
-      const htmlRaw = document.getElementById('sefaz-html-input').value.trim(); const localPadrao = document.getElementById('sefaz-local-padrao').value.trim() || "Nota SEFAZ RS"; const dataPadrao = document.getElementById('sefaz-data-padrao').value || hoje();
-      if (!htmlRaw) { toast("Cole o código HTML da nota primeiro ⚠"); return; }
-      try {
-        const parser = new DOMParser(); const doc = parser.parseFromString(htmlRaw, "text/html"); let adicionados = 0;
-        const linhas = doc.querySelectorAll('table tr, .prod-serv-header + table tr, table.toggle tr');
-        for (const tr of linhas) {
-          const descricaoEl = tr.querySelector('.fixo-prod-serv-descricao span, td span, .descricao'); const qtdEl = tr.querySelector('.fixo-prod-serv-qtd span'); const valorEl = tr.querySelector('.fixo-prod-serv-vb span, .vUnit, .valor');
-          if (descricaoEl && valorEl) {
-            const nome = descricaoEl.textContent.trim(); let qtd = qtdEl ? qtdEl.textContent.trim() : "1"; let precoStr = valorEl.textContent.replace('R$', '').replace(',', '.').trim(); const preco = parseFloat(precoStr);
-            if (nome && !isNaN(preco) && preco > 0) {
-              await addDoc(colRef, { barras: null, nome: nome, preco: preco, local: localPadrao, data: dataPadrao, cat: "outros", qtd: qtd, obs: "Importado via SEFAZ", quem: membroAtual || "Alex", cupomCod: null, cupomVal: null, precoLiq: null, ts: Date.now() }); adicionados++;
-            }
-          }
+   window.processarHtmlSefaz = async () => {
+  const htmlRaw = document.getElementById('sefaz-html-input').value.trim();
+  const localPadrao = document.getElementById('sefaz-local-padrao').value.trim() || "Nota SEFAZ RS";
+  const dataPadrao = document.getElementById('sefaz-data-padrao').value || hoje();
+
+  if (!htmlRaw) {
+    toast("Cole o código HTML da nota primeiro ⚠");
+    return;
+  }
+
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlRaw, "text/html");
+
+    let adicionados = 0;
+
+    // Seletores mais precisos para este DANFE da SEFAZ RS
+    const tabelasItens = doc.querySelectorAll('table.toggle.box, table.prod-serv-header + table');
+
+    for (const tabela of tabelasItens) {
+      const descricaoEl = tabela.querySelector('.fixo-prod-serv-descricao span');
+      const qtdEl = tabela.querySelector('.fixo-prod-serv-qtd span');
+      const valorEl = tabela.querySelector('.fixo-prod-serv-vb span');
+
+      if (descricaoEl && valorEl) {
+        const nome = descricaoEl.textContent.trim();
+        const qtd = qtdEl ? qtdEl.textContent.trim() : "1";
+        let precoStr = valorEl.textContent.replace(/[^\d,]/g, '').replace(',', '.');
+        const preco = parseFloat(precoStr);
+
+        if (nome && !isNaN(preco) && preco > 0) {
+          await addDoc(colRef, {
+            barras: null,
+            nome: nome,
+            preco: preco,
+            local: localPadrao,
+            data: dataPadrao,
+            cat: "outros",
+            qtd: qtd,
+            obs: "Importado via SEFAZ",
+            quem: membroAtual || "Alex",
+            cupomCod: null,
+            cupomVal: null,
+            precoLiq: null,
+            ts: Date.now()
+          });
+          adicionados++;
         }
-        if (adicionados > 0) { toast(`${adicionados} itens importados com sucesso ✓`); fecharModalSefaz(); } else { toast("Nenhum item encontrado. Verifique se colou o HTML completo."); }
-      } catch (err) { console.error(err); toast("Erro ao processar o HTML ⚠"); }
-    };
+      }
+    }
+
+    if (adicionados > 0) {
+      toast(`${adicionados} produtos importados com sucesso ✓`);
+      fecharModalSefaz();
+    } else {
+      toast("Nenhum produto encontrado. Verifique se colou o HTML completo.");
+    }
+
+  } catch (err) {
+    console.error(err);
+    toast("Erro ao processar o HTML ⚠");
+  }
+};
 
     // ════ VINCULAÇÃO DIRETA DOS EVENTOS DE BOTÕES GLOBAIS ════
     const btnImportar = document.getElementById('btn-importar-sefaz');
